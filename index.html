@@ -479,6 +479,93 @@
   #suma-sekcji-body td input[type=checkbox] { margin:0 6px 0 0; vertical-align:middle; width:14px; height:14px; cursor:pointer; accent-color:var(--primary); }
   #suma-sekcji-body .r-all td { border-top:2px solid var(--gray-300); }
   #suma-sekcji-body td.sum-check { text-align:center; width:28px; padding:5px 0; }
+
+  /* ===== MODAL ===== */
+  #modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-overlay.show { display: flex; }
+  #modal-box {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    max-width: 90vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+  }
+  #modal-header h3 { font-size: 14px; font-weight: 600; flex: 1; }
+  #modal-header .modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--gray-400);
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+  #modal-header .modal-close:hover { background: var(--gray-200); color: var(--dark); }
+  #modal-body {
+    overflow: auto;
+    padding: 0 20px 16px;
+    flex: 1;
+  }
+  #modal-body table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+  }
+  #modal-body thead th {
+    background: var(--gray-50);
+    border-bottom: 2px solid var(--gray-200);
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    position: sticky;
+  }
+  #modal-body tbody tr { border-bottom: 1px solid var(--gray-100); }
+  #modal-body tbody tr:nth-child(even) { background: rgba(0,0,0,0.015); }
+  #modal-body tbody td { padding: 8px 12px; color: var(--gray-700); white-space: nowrap; }
+  #modal-body tbody td.text-right { text-align: right; }
+  #modal-body tbody td.money { font-weight: 500; color: var(--gray-800); }
+
+  .clickable-row { cursor: pointer; }
+  .modal-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .modal-summary .si-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray-400); margin-bottom: 2px; }
+  .modal-summary .si-value { font-size: 13px; color: var(--gray-800); font-weight: 500; }
+  #modal-body thead th { top: 0; }
 </style>
 </head>
 <body>
@@ -656,9 +743,6 @@
         </div>
         <div class="table-controls">
           <input type="text" class="search-input" placeholder="Szukaj w PZ..." id="search-pz" oninput="filterTable('pz-naglowki', this.value)">
-          <select class="filter-select" id="filter-dostawca-pz" onchange="filterTable('pz-naglowki', document.getElementById('search-pz').value)">
-            <option value="">Wszyscy dostawcy</option>
-          </select>
           <button class="btn btn-outline" onclick="resetSort('pz-naglowki')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
         </div>
         <div class="table-wrap">
@@ -698,9 +782,6 @@
         </div>
         <div class="table-controls">
           <input type="text" class="search-input" placeholder="Szukaj towaru, kodu, numeru PZ..." id="search-pzw" oninput="filterTable('pz-wiersze', this.value)">
-          <select class="filter-select" id="filter-pz-nr" onchange="filterTable('pz-wiersze', document.getElementById('search-pzw').value)">
-            <option value="">Wszystkie PZ</option>
-          </select>
           <button class="btn btn-outline" onclick="resetSort('pz-wiersze')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
         </div>
         <div class="table-wrap">
@@ -740,9 +821,6 @@
         </div>
         <div class="table-controls">
           <input type="text" class="search-input" placeholder="Szukaj w WZ..." id="search-wz" oninput="filterTable('wz-naglowki', this.value)">
-          <select class="filter-select" id="filter-odbiorca-wz" onchange="filterTable('wz-naglowki', document.getElementById('search-wz').value)">
-            <option value="">Wszyscy odbiorcy</option>
-          </select>
           <button class="btn btn-outline" onclick="resetSort('wz-naglowki')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
         </div>
         <div class="table-wrap">
@@ -782,9 +860,6 @@
         </div>
         <div class="table-controls">
           <input type="text" class="search-input" placeholder="Szukaj towaru, kodu, numeru WZ..." id="search-wzw" oninput="filterTable('wz-wiersze', this.value)">
-          <select class="filter-select" id="filter-wz-nr" onchange="filterTable('wz-wiersze', document.getElementById('search-wzw').value)">
-            <option value="">Wszystkie WZ</option>
-          </select>
           <button class="btn btn-outline" onclick="resetSort('wz-wiersze')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
         </div>
         <div class="table-wrap">
@@ -1540,11 +1615,6 @@ function buildPZNaglowki() {
   ]);
   initTableState('pz-naglowki', rows);
   setEl('meta-pz', jpkData.pzNaglowki.length + ' dokumentów');
-
-  // filter: dostawcy
-  const dostawcy = [...new Set(jpkData.pzNaglowki.map(r=>r.dostawca))].sort().filter(Boolean);
-  document.getElementById('filter-dostawca-pz').innerHTML = dostawcy.map(d => `<option value="${d}">${d}</option>`).join('');
-
   renderTable('pz-naglowki');
 }
 
@@ -1557,10 +1627,6 @@ function buildPZWiersze() {
   ]);
   initTableState('pz-wiersze', rows);
   setEl('meta-pzw', jpkData.pzWiersze.length + ' pozycji');
-
-  const nry = [...new Set(jpkData.pzWiersze.map(r=>r.numerPZ))].sort();
-  document.getElementById('filter-pz-nr').innerHTML = nry.map(n => `<option value="${n}">${n}</option>`).join('');
-
   renderTable('pz-wiersze');
 }
 
@@ -1573,10 +1639,6 @@ function buildWZNaglowki() {
   ]);
   initTableState('wz-naglowki', rows);
   setEl('meta-wz', jpkData.wzNaglowki.length + ' dokumentów');
-
-  const odbiorcy = [...new Set(jpkData.wzNaglowki.map(r=>r.odbiorca))].sort().filter(Boolean);
-  document.getElementById('filter-odbiorca-wz').innerHTML = odbiorcy.map(d => `<option value="${d}">${d}</option>`).join('');
-
   renderTable('wz-naglowki');
 }
 
@@ -1589,10 +1651,6 @@ function buildWZWiersze() {
   ]);
   initTableState('wz-wiersze', rows);
   setEl('meta-wzw', jpkData.wzWiersze.length + ' pozycji');
-
-  const nry = [...new Set(jpkData.wzWiersze.map(r=>r.numerWZ))].sort();
-  document.getElementById('filter-wz-nr').innerHTML = nry.map(n => `<option value="${n}">${n}</option>`).join('');
-
   renderTable('wz-wiersze');
 }
 
@@ -1627,18 +1685,32 @@ function renderTable(id) {
   const moneyCol = (id.includes('wiersze') || id === 'mm') ? [7] : [7];
   const moneyColMM = [10];
 
+  const isHeaderTable = id === 'pz-naglowki' || id === 'wz-naglowki';
+  const isPositionTable = id === 'pz-wiersze' || id === 'wz-wiersze';
+
   tbody.innerHTML = pageData.map((row, ri) => {
     const cells = row.map((cell, ci) => {
       const isNum = typeof cell === 'number';
       const isMoneyCols = (id === 'mm') ? moneyColMM.includes(ci) : moneyCol.includes(ci);
       let display = isNum ? (isMoneyCols ? fmt(cell) : fmtNum(cell)) : escHtml(String(cell));
       const cls = isNum ? (isMoneyCols ? 'text-right money' : 'text-right') : '';
-      // tag for type col in MM
       if (id === 'mm' && ci === 0) display = `<span class="tag tag-purple"><i class="fas fa-exchange-alt" aria-hidden="true"></i> ${display}</span>`;
       return `<td class="${cls}">${display}</td>`;
     }).join('');
-    return `<tr>${cells}</tr>`;
+    const clickable = isHeaderTable || isPositionTable;
+    const doc = clickable ? escHtml(String(row[1])) : '';
+    return `<tr class="${clickable ? 'clickable-row' : ''}" data-doc="${doc}">${cells}</tr>`;
   }).join('');
+
+  // click to show positions / document info
+  tbody.onclick = e => {
+    const tr = e.target.closest('tr.clickable-row');
+    if (!tr) return;
+    const doc = tr.dataset.doc;
+    if (!doc) return;
+    if (id === 'pz-naglowki' || id === 'pz-wiersze') showPositions('PZ', doc);
+    else if (id === 'wz-naglowki' || id === 'wz-wiersze') showPositions('WZ', doc);
+  };
 
   // summary row
   const sumVal = st.filtered.reduce((s, row) => s + (typeof row[row.length-1] === 'number' ? row[row.length-1] : 0), 0);
@@ -1656,13 +1728,14 @@ function renderTable(id) {
       btn.onclick = () => { st.page = page; renderTable(id); };
       pagesEl.appendChild(btn);
     };
+    addBtn('«', 1, st.page===1, false);
     addBtn('‹', st.page-1, st.page===1, false);
-    // show limited pages
     let start = Math.max(1, st.page-2);
     let end = Math.min(totalPages, start+4);
     start = Math.max(1, end-4);
     for (let p=start; p<=end; p++) addBtn(p, p, false, p===st.page);
     addBtn('›', st.page+1, st.page===totalPages, false);
+    addBtn('»', totalPages, st.page===totalPages, false);
   }
 }
 
@@ -1671,42 +1744,81 @@ function escHtml(s) {
 }
 
 // =============================================
+// MODAL – pozycje dla dokumentu
+// =============================================
+function showPositions(type, docNumber) {
+  const positions = type === 'PZ'
+    ? jpkData.pzWiersze.filter(w => w.numerPZ === docNumber)
+    : jpkData.wzWiersze.filter(w => w.numerWZ === docNumber);
+
+  if (!positions.length) return;
+
+  const header = type === 'PZ'
+    ? jpkData.pzNaglowki.find(h => h.numer === docNumber)
+    : jpkData.wzNaglowki.find(h => h.numer === docNumber);
+
+  const sumVal = positions.reduce((s, p) => s + p.wartosc, 0);
+
+  const fields = type === 'PZ'
+    ? [
+        ['Data PZ', header?.data || ''],
+        ['Dostawca', header?.dostawca || ''],
+        ['Nr FA', header?.numerFa || ''],
+        ['Data FA', header?.dataFa || ''],
+      ]
+    : [
+        ['Data WZ', header?.data || ''],
+        ['Odbiorca', header?.odbiorca || ''],
+        ['Nr FA', header?.numerFa || ''],
+        ['Data FA', header?.dataFa || ''],
+      ];
+
+  document.getElementById('modal-title').textContent = `${type} ${docNumber} – pozycje (${positions.length})`;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="modal-summary" id="modal-summary">
+      ${fields.map(f => `<div><div class="si-label">${f[0]}</div><div class="si-value">${escHtml(f[1]) || '—'}</div></div>`).join('')}
+      <div><div class="si-label">Wartość</div><div class="si-value money">${fmt(header?.wartosc || sumVal)} PLN</div></div>
+    </div>
+    <table>
+      <thead><tr>${['Lp','Kod towaru','Nazwa towaru','Ilość','Jm','Cena jedn.','Wartość'].map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${positions.map((p, i) => `<tr>${[i+1, p.kod, p.nazwa, p.ilosc, p.jm, p.cena, p.wartosc].map((c, ci) => {
+        const isNum = typeof c === 'number';
+        const isMoney = ci >= 5;
+        return `<td class="${isNum ? 'text-right' : ''}${isMoney ? ' money' : ''}">${isNum ? (isMoney ? fmt(c) : fmtNum(c)) : escHtml(String(c))}</td>`;
+      }).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+
+  document.getElementById('modal-overlay').classList.add('show');
+  document.querySelectorAll('#modal-body thead th').forEach(th => th.style.top = document.getElementById('modal-summary').offsetHeight + 'px');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  document.getElementById('modal-body').innerHTML = '';
+}
+
+// =============================================
 // FILTER
 // =============================================
+let _searchTimers = {};
 function filterTable(id, searchVal) {
-  const st = tableState[id];
-  if (!st) return;
+  clearTimeout(_searchTimers[id]);
+  _searchTimers[id] = setTimeout(() => {
+    const st = tableState[id];
+    if (!st) return;
 
-  const q = searchVal.toLowerCase().trim();
-  let filtered = st.data;
+    const q = searchVal.toLowerCase().trim();
 
-  // extra filter dropdowns
-  if (id === 'pz-naglowki') {
-    const dos = document.getElementById('filter-dostawca-pz')?.value;
-    if (dos) filtered = filtered.filter(r => String(r[4]) === dos);
-  }
-  if (id === 'wz-naglowki') {
-    const odb = document.getElementById('filter-odbiorca-wz')?.value;
-    if (odb) filtered = filtered.filter(r => String(r[4]) === odb);
-  }
-  if (id === 'pz-wiersze') {
-    const nr = document.getElementById('filter-pz-nr')?.value;
-    if (nr) filtered = filtered.filter(r => String(r[1]) === nr);
-  }
-  if (id === 'wz-wiersze') {
-    const nr = document.getElementById('filter-wz-nr')?.value;
-    if (nr) filtered = filtered.filter(r => String(r[1]) === nr);
-  }
+    if (q.length > 0 && q.length < 3) return;
 
-  if (q) {
-    filtered = filtered.filter(row =>
-      row.some(cell => String(cell).toLowerCase().includes(q))
-    );
-  }
+    st.filtered = q.length >= 3
+      ? st.data.filter(row => row.some(cell => String(cell).toLowerCase().includes(q)))
+      : st.data.slice();
 
-  st.filtered = filtered;
-  st.page = 1;
-  renderTable(id);
+    st.page = 1;
+    renderTable(id);
+  }, 200);
 }
 
 // =============================================
@@ -1871,5 +1983,17 @@ function exportAllXLS() {
   } catch(_) {}
 })();
 </script>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box">
+    <div id="modal-header">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
 </body>
 </html>
