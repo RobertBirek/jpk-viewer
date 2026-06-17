@@ -449,15 +449,35 @@
   /* highlight matched text */
   mark { background: #fef08a; border-radius: 2px; padding: 0 1px; }
 
-  /* ===== SUMMARY TABLE ===== */
-  .summary-table { width:100%; border-collapse:collapse; font-size:13px; }
-  .summary-table th { background:var(--gray-50); border-bottom:2px solid var(--gray-200); padding:10px 16px; font-size:11px; font-weight:600; color:var(--gray-500); text-transform:uppercase; letter-spacing:0.3px; }
-  .summary-table td { padding:10px 16px; color:var(--gray-700); }
-  .summary-table td.money { font-weight:600; font-variant-numeric:tabular-nums; }
-  .summary-table tr:last-child td { padding:12px 16px; }
-  .summary-table .clickable-row { cursor:pointer; transition:background .15s; }
-  .summary-table .clickable-row:hover { background:var(--gray-50); }
-  .summary-table .clickable-row:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+  /* ===== PODSUMOWANIE SEKCJE ===== */
+  .suma-sekcja { background:#fff; border-bottom:1px solid var(--gray-200); }
+  .suma-sekcja:last-of-type { border-bottom:none; }
+  .suma-tytul { padding:10px 14px 6px; font-weight:600; font-size:13px; cursor:pointer; transition:background .15s; border-radius:4px 4px 0 0; }
+  .suma-tytul:hover { background:var(--gray-50); }
+  .suma-tytul:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+  .suma-tabela { padding:0 8px 8px; }
+  .suma-tabela table { width:100%; border-collapse:collapse; font-size:13px; }
+  .suma-tabela th:nth-child(1),
+  .suma-tabela td:nth-child(1) { width:44%; }
+  .suma-tabela th:nth-child(2),
+  .suma-tabela td:nth-child(2) { width:26%; }
+  .suma-tabela th:nth-child(3),
+  .suma-tabela td:nth-child(3) { width:30%; }
+  .suma-tabela th { text-align:right; padding:6px 10px; font-size:10px; font-weight:600; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.3px; border-bottom:1px solid var(--gray-200); }
+  .suma-tabela th:first-child { text-align:left; }
+  .suma-tabela td { text-align:right; padding:5px 10px; color:var(--gray-700); }
+  .suma-tabela td:first-child { text-align:left; }
+  .suma-tabela td.money { font-weight:600; font-variant-numeric:tabular-nums; }
+  .suma-tabela .r-zero td { color:var(--gray-400); }
+  .suma-tabela .r-sum td { border-top:1px solid var(--gray-300); font-weight:600; }
+  #suma-sekcji-body table { width:100%; border-collapse:collapse; font-size:13px; }
+  #suma-sekcji-body th { text-align:right; padding:5px 8px; font-size:10px; font-weight:600; color:var(--gray-400); text-transform:uppercase; letter-spacing:0.3px; border-bottom:1px solid var(--gray-200); }
+  #suma-sekcji-body th:first-child { text-align:left; }
+  #suma-sekcji-body td { text-align:right; padding:5px 8px; color:var(--gray-700); font-weight:600; font-variant-numeric:tabular-nums; }
+  #suma-sekcji-body td:first-child { text-align:left; font-weight:400; }
+  #suma-sekcji-body td input[type=checkbox] { margin:0 6px 0 0; vertical-align:middle; width:14px; height:14px; cursor:pointer; accent-color:var(--primary); }
+  #suma-sekcji-body .r-all td { border-top:2px solid var(--gray-300); }
+  #suma-sekcji-body td.sum-check { text-align:center; width:28px; padding:5px 0; }
 </style>
 </head>
 <body>
@@ -594,21 +614,31 @@
           <span class="card-meta" id="meta-podsumowanie"></span>
         </div>
         <div class="card-body" style="padding:0">
-          <div class="table-wrap">
-            <table class="summary-table" id="table-podsumowanie">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th class="text-right">Dokumenty</th>
-                  <th class="text-right">Pozycje</th>
-                  <th class="text-right">Suma wartości</th>
-                  <th class="text-right">Suma ilości</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-podsumowanie"></tbody>
-            </table>
+          <div class="suma-sekcja" id="sekcja-pz">
+            <div class="suma-tytul" onclick="showView('pz-naglowki')" tabindex="0" role="button" onkeydown="if(event.key==='Enter')showView('pz-naglowki')">
+              <i class="fas fa-file-import" aria-hidden="true" style="color:var(--success)"></i> PZ – Przyjęcia
+            </div>
+            <div class="suma-tabela" id="tabela-pz"></div>
+          </div>
+          <div class="suma-sekcja" id="sekcja-wz">
+            <div class="suma-tytul" onclick="showView('wz-naglowki')" tabindex="0" role="button" onkeydown="if(event.key==='Enter')showView('wz-naglowki')">
+              <i class="fas fa-file-export" aria-hidden="true" style="color:var(--warning)"></i> WZ – Wydania
+            </div>
+            <div class="suma-tabela" id="tabela-wz"></div>
+          </div>
+          <div class="suma-sekcja" id="sekcja-mm">
+            <div class="suma-tytul" onclick="showView('mm')" tabindex="0" role="button" onkeydown="if(event.key==='Enter')showView('mm')">
+              <i class="fas fa-exchange-alt" aria-hidden="true" style="color:var(--secondary)"></i> MM – Przesunięcia
+            </div>
+            <div class="suma-tabela" id="tabela-mm"></div>
           </div>
         </div>
+      </div>
+      <div class="card" id="card-suma-sekcji" style="display:none">
+        <div class="suma-tytul" style="cursor:default">
+          <i class="fas fa-calculator" aria-hidden="true" style="color:var(--secondary)"></i> Podsumowanie sekcji
+        </div>
+        <div class="card-body" style="padding:0" id="suma-sekcji-body"></div>
       </div>
     </div>
 
@@ -865,6 +895,58 @@ function toggleSidebar() {
 }
 
 // =============================================
+// INDEXED DB – persists parsed data across refresh
+// =============================================
+const DB_NAME = 'jpk-viewer';
+const DB_VER = 1;
+const STORE = 'data';
+let _db = null;
+
+function dbOpen() {
+  return new Promise((resolve, reject) => {
+    if (_db) return resolve(_db);
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbSave(key, val) {
+  return dbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(val, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function dbLoad(key) {
+  return dbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function dbDelete(key) {
+  return dbOpen().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function persistJPKData() {
+  dbSave('jpkData', jpkData).catch(() => {});
+  dbSave('meta', { savedAt: Date.now(), fileName: _lastFileName || '' }).catch(() => {});
+}
+
+let _lastFileName = '';
+
+// =============================================
 // FILE HANDLING
 // =============================================
 const dropArea = document.getElementById('drop-area');
@@ -890,10 +972,12 @@ function handleFile(file) {
   if (file.size > 30 * 1024 * 1024 && typeof sax !== 'undefined') {
     showLoading(true, 'Wczytuję duży plik strumieniowo...');
     showProgress(0);
+    _lastFileName = file.name;
     parseJPKStream(file).then(parsed => {
       jpkData = parsed;
       showLoading(false);
       showContent();
+      persistJPKData();
     }).catch(err => {
       showLoading(false);
       alert('Błąd parsowania strumieniowego:\n' + err.message);
@@ -901,12 +985,14 @@ function handleFile(file) {
     });
   } else {
     showLoading(true, 'Wczytuję plik JPK_MAG...');
+    _lastFileName = file.name;
     const reader = new FileReader();
     reader.onload = e => {
       try {
         parseJPK(e.target.result);
         showLoading(false);
         showContent();
+        persistJPKData();
       } catch(err) {
         showLoading(false);
         alert('Błąd parsowania pliku XML:\n' + err.message);
@@ -918,7 +1004,7 @@ function handleFile(file) {
 }
 
 function loadNewFile() {
-  location.reload();
+  dbDelete('jpkData').finally(() => dbDelete('meta').finally(() => location.reload()));
 }
 
 // =============================================
@@ -1348,44 +1434,76 @@ function buildStats() {
 // PODSUMOWANIE
 // =============================================
 function buildPodsumowanie() {
-  const sumPZ = jpkData.pzNaglowki.reduce((s,r)=>s+r.wartosc,0);
-  const sumWZ = jpkData.wzNaglowki.reduce((s,r)=>s+r.wartosc,0);
-  const sumMM = jpkData.mmNaglowki.reduce((s,r)=>s+r.wartosc,0);
-  const iloscPZ = jpkData.pzWiersze.reduce((s,r)=>s+r.ilosc,0);
-  const iloscWZ = jpkData.wzWiersze.reduce((s,r)=>s+r.ilosc,0);
-  const iloscMM = jpkData.mmFull.reduce((s,r)=>s+r.ilosc,0);
-  const liczbaDokPZ = jpkData.pzNaglowki.length;
-  const liczbaDokWZ = jpkData.wzNaglowki.length;
-  const liczbaDokMM = jpkData.mmNaglowki.length;
-  const liczbaPozPZ = jpkData.pzWiersze.length;
-  const liczbaPozWZ = jpkData.wzWiersze.length;
+  function podsumuj(lista) {
+    const plus = lista.filter(r => r.wartosc > 0);
+    const minus = lista.filter(r => r.wartosc < 0);
+    const zero = lista.filter(r => r.wartosc === 0);
+    return {
+      plus: { l: plus.length, suma: plus.reduce((s,r) => s + r.wartosc, 0) },
+      minus: { l: minus.length, suma: minus.reduce((s,r) => s + r.wartosc, 0) },
+      zero: { l: zero.length },
+      l: lista.length,
+      suma: lista.reduce((s,r) => s + r.wartosc, 0)
+    };
+  }
 
-  const rows = [
-    { label:'PZ – Przyjęcia', dok: liczbaDokPZ, poz: liczbaPozPZ, wart: sumPZ, il: iloscPZ, cls:'tag-green', icon:'file-import', view:'pz-naglowki' },
-    { label:'WZ – Wydania', dok: liczbaDokWZ, poz: liczbaPozWZ, wart: sumWZ, il: iloscWZ, cls:'tag-orange', icon:'file-export', view:'wz-naglowki' },
-    { label:'MM – Przesunięcia', dok: liczbaDokMM, poz: 0, wart: sumMM, il: iloscMM, cls:'tag-purple', icon:'exchange-alt', view:'mm' },
+  const p = podsumuj(jpkData.pzNaglowki);
+  const w = podsumuj(jpkData.wzNaglowki);
+  const m = podsumuj(jpkData.mmNaglowki);
+
+  function htmlTabela(sekcja) {
+    const rows = [];
+    const add = (label, count, val, cls) => {
+      const zero = !count && !val;
+      rows.push(`<tr${cls||(zero?' class="r-zero"':'')}><td>${label}</td><td>${count.toLocaleString('pl-PL')}</td><td class="money">${zero ? '—' : fmt(val)}</td></tr>`);
+    };
+    add('Dodatnie', sekcja.plus.l, sekcja.plus.suma);
+    add('Ujemne', sekcja.minus.l, sekcja.minus.suma);
+    if (sekcja.zero.l) add('Zerowe', sekcja.zero.l, 0);
+    add('Suma', sekcja.l, sekcja.suma, ' class="r-sum"');
+    return `<table><thead><tr><th>Nazwa</th><th>Dokumenty</th><th>Wartość</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  }
+
+  document.getElementById('tabela-pz').innerHTML = htmlTabela(p);
+  document.getElementById('tabela-wz').innerHTML = htmlTabela(w);
+  document.getElementById('tabela-mm').innerHTML = htmlTabela(m);
+
+  const sekcje = [
+    { id:'pz', label:'PZ', val: p.suma },
+    { id:'wz', label:'WZ', val: w.suma },
+    { id:'mm', label:'MM', val: m.suma },
   ];
-
-  const saldoWart = sumPZ - sumWZ;
-  const saldoIl = iloscPZ - iloscWZ;
-
-  document.getElementById('tbody-podsumowanie').innerHTML = rows.map((r, i) => {
-    const tagCls = r.cls || 'tag-blue';
-    return `<tr class="clickable-row" onclick="showView('${r.view}')" onkeydown="if(event.key==='Enter')showView('${r.view}')" tabindex="0" role="button" data-view="${r.view}">
-      <td><span class="tag ${tagCls}"><i class="fas fa-${r.icon}" aria-hidden="true"></i> ${r.label}</span></td>
-      <td class="text-right">${r.dok.toLocaleString('pl-PL')}</td>
-      <td class="text-right">${r.poz.toLocaleString('pl-PL')}</td>
-      <td class="text-right money">${fmt(r.wart)}</td>
-      <td class="text-right">${fmtNum(r.il)}</td>
-    </tr>`;
-  }).join('') + `
-    <tr style="border-top:2px solid var(--gray-300);font-weight:600">
-      <td><span class="tag" style="background:var(--gray-100);color:var(--gray-700)"><i class="fas fa-balance-scale" aria-hidden="true"></i> Saldo (PZ – WZ)</span></td>
-      <td class="text-right">${(liczbaDokPZ - liczbaDokWZ).toLocaleString('pl-PL')}</td>
-      <td class="text-right">${(liczbaPozPZ - liczbaPozWZ).toLocaleString('pl-PL')}</td>
-      <td class="text-right money" style="color:${saldoWart < 0 ? 'var(--danger)' : 'var(--success)'}">${fmt(saldoWart)}</td>
-      <td class="text-right" style="color:${saldoIl < 0 ? 'var(--danger)' : 'var(--success)'}">${fmtNum(saldoIl)}</td>
-    </tr>`;
+  const rowsHtml = sekcje.map(s => `
+    <tr>
+      <td class="sum-check"><input type="checkbox" data-sekcja="${s.id}" checked></td>
+      <td>${s.label}</td>
+      <td data-val="${s.val}">${fmt(s.val)}</td>
+    </tr>
+  `).join('');
+  document.getElementById('suma-sekcji-body').innerHTML = `
+    <table>
+      <thead><tr><th></th><th>Nazwa</th><th>Wartość</th></tr></thead>
+      <tbody>
+        ${rowsHtml}
+        <tr class="r-all">
+          <td></td>
+          <td>Razem</td>
+          <td id="suma-razem">${fmt(p.suma + w.suma + m.suma)}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+  document.getElementById('card-suma-sekcji').style.display = '';
+  document.querySelectorAll('#suma-sekcji-body input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', function() {
+      let total = 0;
+      document.querySelectorAll('#suma-sekcji-body input[type=checkbox]:checked').forEach(c => {
+        const tr = c.closest('tr');
+        total += parseFloat(tr.querySelector('td[data-val]').dataset.val) || 0;
+      });
+      document.getElementById('suma-razem').textContent = fmt(total);
+    });
+  });
 
   document.getElementById('meta-podsumowanie').textContent =
     `okres: ${jpkData.naglowek['Data Od'] || '?'} – ${jpkData.naglowek['Data Do'] || '?'}`;
@@ -1720,6 +1838,17 @@ function exportAllXLS() {
 
   XLSX.writeFile(wb, `JPK_MAG_${(firma||'eksport').replace(/[^a-zA-Z0-9_]/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+
+// ---- Auto-wczytanie z IndexedDB po odświeżeniu ----
+(async function() {
+  try {
+    const saved = await dbLoad('jpkData');
+    if (saved) {
+      jpkData = saved;
+      showContent();
+    }
+  } catch(_) {}
+})();
 </script>
 </body>
 </html>
