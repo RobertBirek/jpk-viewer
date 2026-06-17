@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Przeglądarka JPK_MAG</title>
+<link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
+<!-- SheetJS do eksportu XLSX (lokalny) -->
+<script src="vendor/xlsx/xlsx.full.min.js"></script>
+<script src="vendor/sax/sax.min.js"></script>
+<style>
+  :root {
+    --primary: #1a56db;
+    --primary-light: #e8f0fe;
+    --secondary: #6366f1;
+    --success: #0e9f6e;
+    --warning: #ff5a1f;
+    --danger: #e02424;
+    --dark: #111827;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --sidebar-w: 220px;
+    --header-h: 56px;
+    --z-sidebar: 200;
+    --z-overlay: 199;
+    --z-loading: 999;
+    --z-sticky: 50;
+  }
+
+  html { scroll-behavior: smooth; font-variant-numeric: tabular-nums; }
+
+  ::selection { background: var(--primary-light); color: var(--primary); }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--gray-100);
+    color: var(--dark);
+    font-size: 13px;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ===== SIDEBAR ===== */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--gray-800);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: var(--z-sidebar);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #sidebar-logo {
+    padding: 16px;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+  #sidebar-logo i { font-size: 20px; }
+  #sidebar-logo small { font-size: 10px; font-weight: 400; opacity: 0.85; display: block; }
+
+  #sidebar nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+  .nav-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--gray-400);
+    padding: 12px 16px 4px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    cursor: pointer;
+    color: var(--gray-300);
+    border-left: 3px solid transparent;
+    transition: all 0.2s;
+    font-size: 13px;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .nav-item:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+  .nav-item.active { background: rgba(26,86,219,0.25); color: #fff; border-left-color: var(--primary); font-weight: 500; }
+  .nav-item .badge {
+    margin-left: auto;
+    background: var(--primary);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 10px;
+    padding: 1px 7px;
+    font-weight: 600;
+  }
+  #sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    font-size: 11px;
+    color: var(--gray-500);
+  }
+
+  /* ===== MAIN ===== */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ===== TOPBAR ===== */
+  #topbar {
+    height: var(--header-h);
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+  }
+  #topbar h1 { font-size: 16px; font-weight: 600; flex: 1; letter-spacing: -0.02em; }
+  #topbar .firm-info { font-size: 12px; color: var(--gray-500); }
+
+  /* ===== UPLOAD ZONE ===== */
+  #upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - var(--header-h));
+    padding: 40px;
+  }
+  #drop-area {
+    border: 3px dashed var(--gray-300);
+    border-radius: 16px;
+    padding: 60px 80px;
+    text-align: center;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.3s;
+    max-width: 560px;
+    width: 100%;
+  }
+  #drop-area:hover, #drop-area.drag-over {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+  #drop-area i { font-size: 56px; color: var(--gray-300); margin-bottom: 16px; display: block; }
+  #drop-area:hover i, #drop-area.drag-over i { color: var(--primary); }
+  #drop-area h2 { font-size: 18px; font-weight: 600; color: var(--gray-700); margin-bottom: 8px; }
+  #drop-area p { color: var(--gray-500); margin-bottom: 20px; line-height: 1.6; }
+  #file-input { display: none; }
+  .btn-upload {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: background 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-upload:hover { background: #1648c7; }
+  .btn-upload:active { transform: scale(0.97); }
+  .privacy-note {
+    margin-top: 20px;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #166534;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 560px;
+    width: 100%;
+    text-align: left;
+  }
+  .privacy-note i { margin-top: 1px; flex-shrink: 0; }
+
+  /* ===== CONTENT AREA ===== */
+  #content { display: none; flex-direction: column; flex: 1; }
+  #content.active { display: flex; }
+
+  /* ===== VIEW PANEL ===== */
+  .view-panel { display: none; flex-direction: column; flex: 1; padding: 20px; }
+  .view-panel.active { display: flex; }
+
+  /* ===== CARD ===== */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--gray-100);
+    background: var(--gray-50);
+  }
+  .card-header h3 { font-size: 13px; font-weight: 600; flex: 1; }
+  .card-header .card-meta { font-size: 11px; color: var(--gray-500); }
+  .card-body { padding: 20px; }
+
+  /* ===== INFO GRID (nagłówek) ===== */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .info-item { }
+  .info-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gray-400); margin-bottom: 4px; }
+  .info-value { font-size: 14px; color: var(--gray-800); font-weight: 500; }
+
+  /* ===== CONTROLS ===== */
+  .table-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--gray-100);
+    flex-wrap: wrap;
+  }
+  .search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 7px 12px 7px 32px;
+    border: 1px solid var(--gray-300);
+    border-radius: 7px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+  }
+  .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .search-input:focus-visible { outline: none; }
+
+  .btn {
+    border: none;
+    padding: 7px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #057a55; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #1648c7; }
+  .btn-outline {
+    background: #fff;
+    color: var(--gray-600);
+    border: 1px solid var(--gray-300);
+  }
+  .btn-outline:hover { background: var(--gray-50); }
+
+  .filter-select {
+    padding: 7px 10px;
+    border: 1px solid var(--gray-300);
+    border-radius: 7px;
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    background: #fff;
+  }
+  .filter-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .filter-select:focus-visible { outline: none; }
+
+  /* ===== TABLE ===== */
+  .table-wrap { overflow-x: auto; flex: 1; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead th {
+    background: var(--gray-50);
+    border-bottom: 2px solid var(--gray-200);
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    position: sticky;
+    top: 0;
+  }
+  thead th:hover { background: var(--gray-100); }
+  thead th .sort-icon { margin-left: 4px; opacity: 0.4; font-size: 9px; }
+  thead th.sort-asc .sort-icon, thead th.sort-desc .sort-icon { opacity: 1; color: var(--primary); }
+
+  tbody tr { border-bottom: 1px solid var(--gray-100); transition: background 0.12s ease; }
+  tbody tr:hover { background: var(--primary-light); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: rgba(0,0,0,0.015); }
+  tbody tr:nth-child(even):hover { background: var(--primary-light); }
+  tbody td { padding: 8px 12px; color: var(--gray-700); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  tbody td.text-right { text-align: right; }
+  tbody td.money { font-weight: 500; color: var(--gray-800); }
+
+  /* row groups */
+  tr.group-header td {
+    background: #eef2ff;
+    font-weight: 600;
+    color: var(--primary);
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+
+  /* ===== TABLE FOOTER ===== */
+  .table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-top: 1px solid var(--gray-100);
+    font-size: 12px;
+    color: var(--gray-500);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pagination { display: flex; gap: 4px; }
+  .page-btn {
+    border: 1px solid var(--gray-300);
+    background: #fff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-family: inherit;
+    transition: all 0.12s ease;
+  }
+  .page-btn:hover { background: var(--gray-100); }
+  .page-btn:active { transform: scale(0.95); }
+  .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ===== TAGS ===== */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .tag-blue { background: #dbeafe; color: #1d4ed8; }
+  .tag-green { background: #d1fae5; color: #065f46; }
+  .tag-orange { background: #ffedd5; color: #9a3412; }
+  .tag-purple { background: #ede9fe; color: #5b21b6; }
+
+  /* ===== LOADING ===== */
+  #loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.85);
+    z-index: var(--z-loading);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #loading-overlay.show { display: flex; }
+  #progress-wrap { width:320px; max-width:80vw; text-align:center; }
+  #progress-bar { width:0%; height:6px; background:var(--primary); border-radius:3px; transition:width .1s linear; }
+  #progress-track { width:100%; height:6px; background:var(--gray-200); border-radius:3px; overflow:hidden; margin-top:8px; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid var(--gray-200);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== STAT CARDS ===== */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+    padding: 16px;
+  }
+  .stat-card .stat-label { font-size: 11px; color: var(--gray-400); font-weight: 500; margin-bottom: 4px; }
+  .stat-card .stat-value { font-size: 22px; font-weight: 700; color: var(--gray-800); letter-spacing: -0.03em; }
+  .stat-card .stat-sub { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+
+  /* ===== RESPONSIVE ===== */
+  #menu-toggle { display: none; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--gray-600); padding: 4px; }
+  #sidebar-overlay { display: none; }
+  @media (max-width: 768px) {
+    #menu-toggle { display: block; }
+    :root { --sidebar-w: 0px; }
+    #sidebar { transform: translateX(-100%); position: fixed;     z-index: var(--z-sidebar); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; }
+    #sidebar-overlay.open { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: var(--z-overlay); }
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+  /* highlight matched text */
+  mark { background: #fef08a; border-radius: 2px; padding: 0 1px; }
+
+  /* ===== SUMMARY TABLE ===== */
+  .summary-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .summary-table th { background:var(--gray-50); border-bottom:2px solid var(--gray-200); padding:10px 16px; font-size:11px; font-weight:600; color:var(--gray-500); text-transform:uppercase; letter-spacing:0.3px; }
+  .summary-table td { padding:10px 16px; color:var(--gray-700); }
+  .summary-table td.money { font-weight:600; font-variant-numeric:tabular-nums; }
+  .summary-table tr:last-child td { padding:12px 16px; }
+  .summary-table .clickable-row { cursor:pointer; transition:background .15s; }
+  .summary-table .clickable-row:hover { background:var(--gray-50); }
+  .summary-table .clickable-row:focus-visible { outline:2px solid var(--primary); outline-offset:-2px; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:var(--gray-600);font-weight:500;" id="loading-text">Wczytuję plik JPK_MAG...</div>
+  <div id="progress-wrap">
+    <div style="font-size:12px;color:var(--gray-400);" id="loading-pct"></div>
+    <div id="progress-track"><div id="progress-bar"></div></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div id="sidebar-logo">
+    <i class="fas fa-warehouse" aria-hidden="true"></i>
+    <div>
+      JPK_MAG
+      <small>Przeglądarka dokumentów</small>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-section-title">Dane firmy</div>
+    <div class="nav-item active" onclick="showView('naglowek')" onkeydown="if(event.key==='Enter')showView('naglowek')" role="button" tabindex="0" id="nav-naglowek">
+      <i class="fas fa-building" aria-hidden="true" style="width:16px"></i>
+      Nagłówek
+    </div>
+
+    <div class="nav-section-title">Dokumenty magazynowe</div>
+    <div class="nav-item" onclick="showView('pz-naglowki')" onkeydown="if(event.key==='Enter')showView('pz-naglowki')" role="button" tabindex="0" id="nav-pz-naglowki">
+      <i class="fas fa-file-import" aria-hidden="true" style="width:16px"></i>
+      PZ – nagłówki
+      <span class="badge" id="badge-pz">0</span>
+    </div>
+    <div class="nav-item" onclick="showView('pz-wiersze')" onkeydown="if(event.key==='Enter')showView('pz-wiersze')" role="button" tabindex="0" id="nav-pz-wiersze">
+      <i class="fas fa-list" aria-hidden="true" style="width:16px"></i>
+      PZ – pozycje
+      <span class="badge" id="badge-pzw">0</span>
+    </div>
+    <div class="nav-item" onclick="showView('wz-naglowki')" onkeydown="if(event.key==='Enter')showView('wz-naglowki')" role="button" tabindex="0" id="nav-wz-naglowki">
+      <i class="fas fa-file-export" aria-hidden="true" style="width:16px"></i>
+      WZ – nagłówki
+      <span class="badge" id="badge-wz">0</span>
+    </div>
+    <div class="nav-item" onclick="showView('wz-wiersze')" onkeydown="if(event.key==='Enter')showView('wz-wiersze')" role="button" tabindex="0" id="nav-wz-wiersze">
+      <i class="fas fa-list" aria-hidden="true" style="width:16px"></i>
+      WZ – pozycje
+      <span class="badge" id="badge-wzw">0</span>
+    </div>
+    <div class="nav-item" onclick="showView('mm')" onkeydown="if(event.key==='Enter')showView('mm')" role="button" tabindex="0" id="nav-mm">
+      <i class="fas fa-exchange-alt" aria-hidden="true" style="width:16px"></i>
+      MM – przesunięcia
+      <span class="badge" id="badge-mm">0</span>
+    </div>
+
+    <div class="nav-section-title">Eksport</div>
+    <div class="nav-item" onclick="exportAllXLS()" onkeydown="if(event.key==='Enter')exportAllXLS()" role="button" tabindex="0">
+      <i class="fas fa-file-excel" aria-hidden="true" style="width:16px;color:#22c55e"></i>
+      Eksport do XLSX
+    </div>
+    <div class="nav-item" onclick="loadNewFile()" onkeydown="if(event.key==='Enter')loadNewFile()" role="button" tabindex="0">
+      <i class="fas fa-folder-open" aria-hidden="true" style="width:16px"></i>
+      Wczytaj inny plik
+    </div>
+  </nav>
+  <div id="sidebar-footer">
+    <div style="margin-bottom:2px"><i class="fas fa-lock" aria-hidden="true" style="color:#22c55e"></i> Dane lokalne – brak sieci</div>
+    <div>© <span id="footer-year">2025</span> JPK_MAG Viewer</div>
+  </div>
+</aside>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- MAIN -->
+<main id="main">
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <button id="menu-toggle" onclick="toggleSidebar()" aria-label="Menu"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <h1 id="topbar-title">Przeglądarka JPK_MAG</h1>
+    <div class="firm-info" id="firm-info"></div>
+    <button class="btn btn-success" onclick="exportAllXLS()" id="btn-export" style="display:none">
+      <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport XLSX
+    </button>
+  </header>
+
+  <!-- UPLOAD ZONE -->
+  <div id="upload-zone">
+    <div id="drop-area">
+      <i class="fas fa-file-code" aria-hidden="true"></i>
+      <h2>Wczytaj plik JPK_MAG</h2>
+      <p>Przeciągnij i upuść plik XML lub kliknij, aby wybrać z dysku.<br>Plik jest przetwarzany <strong>wyłącznie lokalnie</strong> – nic nie trafia do internetu.</p>
+      <button class="btn-upload" onclick="document.getElementById('file-input').click()">
+        <i class="fas fa-upload" aria-hidden="true"></i> Wybierz plik XML
+      </button>
+      <input type="file" id="file-input" accept=".xml" onchange="handleFile(this.files[0])">
+    </div>
+    <div class="privacy-note">
+      <i class="fas fa-shield-alt" aria-hidden="true"></i>
+      <div><strong>Prywatność:</strong> Plik JPK jest parsowany bezpośrednio w przeglądarce. Żadne dane nie są przesyłane na serwer. Możesz używać bez połączenia z internetem (poza wczytaniem bibliotek przy pierwszym uruchomieniu).</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+    <!-- NAGŁÓWEK -->
+    <div class="view-panel active" id="view-naglowek">
+      <div class="stats-row" id="stats-row"></div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-building" aria-hidden="true" style="color:var(--primary)"></i>
+          <h3>Dane nagłówka JPK_MAG</h3>
+          <button class="btn btn-success" onclick="exportSheet('naglowek')">
+            <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="info-grid" id="info-naglowek"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-industry" aria-hidden="true" style="color:var(--primary)"></i>
+          <h3>Dane podmiotu</h3>
+        </div>
+        <div class="card-body">
+          <div class="info-grid" id="info-podmiot"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-chart-pie" aria-hidden="true" style="color:var(--secondary)"></i>
+          <h3>Podsumowanie PZ / WZ / MM</h3>
+          <span class="card-meta" id="meta-podsumowanie"></span>
+        </div>
+        <div class="card-body" style="padding:0">
+          <div class="table-wrap">
+            <table class="summary-table" id="table-podsumowanie">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="text-right">Dokumenty</th>
+                  <th class="text-right">Pozycje</th>
+                  <th class="text-right">Suma wartości</th>
+                  <th class="text-right">Suma ilości</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-podsumowanie"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PZ NAGŁÓWKI -->
+    <div class="view-panel" id="view-pz-naglowki">
+      <div class="card" style="flex:1;display:flex;flex-direction:column">
+        <div class="card-header">
+          <i class="fas fa-file-import" aria-hidden="true" style="color:var(--primary)"></i>
+          <h3>Przyjęcia Zewnętrzne (PZ) – nagłówki</h3>
+          <span class="card-meta" id="meta-pz"></span>
+          <button class="btn btn-success" onclick="exportSheet('pz-naglowki')">
+            <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport
+          </button>
+        </div>
+        <div class="table-controls">
+          <input type="text" class="search-input" placeholder="Szukaj w PZ..." id="search-pz" oninput="filterTable('pz-naglowki', this.value)">
+          <select class="filter-select" id="filter-dostawca-pz" onchange="filterTable('pz-naglowki', document.getElementById('search-pz').value)">
+            <option value="">Wszyscy dostawcy</option>
+          </select>
+          <button class="btn btn-outline" onclick="resetSort('pz-naglowki')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-pz-naglowki">
+            <thead>
+              <tr>
+                <th onclick="sortTable('pz-naglowki',0)">Lp <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',1)">Nr PZ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',2)">Data PZ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',3)">Data otrzymania <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',4)">Dostawca <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',5)">Nr FA/dok. <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',6)">Data FA <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-naglowki',7)" class="text-right">Wartość PZ <span class="sort-icon">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-pz-naglowki"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="footer-pz-naglowki"></span>
+          <div class="pagination" id="pages-pz-naglowki"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PZ WIERSZE -->
+    <div class="view-panel" id="view-pz-wiersze">
+      <div class="card" style="flex:1;display:flex;flex-direction:column">
+        <div class="card-header">
+          <i class="fas fa-list" aria-hidden="true" style="color:var(--primary)"></i>
+          <h3>Przyjęcia Zewnętrzne (PZ) – pozycje towarów</h3>
+          <span class="card-meta" id="meta-pzw"></span>
+          <button class="btn btn-success" onclick="exportSheet('pz-wiersze')">
+            <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport
+          </button>
+        </div>
+        <div class="table-controls">
+          <input type="text" class="search-input" placeholder="Szukaj towaru, kodu, numeru PZ..." id="search-pzw" oninput="filterTable('pz-wiersze', this.value)">
+          <select class="filter-select" id="filter-pz-nr" onchange="filterTable('pz-wiersze', document.getElementById('search-pzw').value)">
+            <option value="">Wszystkie PZ</option>
+          </select>
+          <button class="btn btn-outline" onclick="resetSort('pz-wiersze')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-pz-wiersze">
+            <thead>
+              <tr>
+                <th onclick="sortTable('pz-wiersze',0)">Lp <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',1)">Nr PZ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',2)">Kod towaru <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',3)">Nazwa towaru <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',4)" class="text-right">Ilość <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',5)">Jm <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',6)" class="text-right">Cena jedn. <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('pz-wiersze',7)" class="text-right">Wartość <span class="sort-icon">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-pz-wiersze"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="footer-pz-wiersze"></span>
+          <div class="pagination" id="pages-pz-wiersze"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WZ NAGŁÓWKI -->
+    <div class="view-panel" id="view-wz-naglowki">
+      <div class="card" style="flex:1;display:flex;flex-direction:column">
+        <div class="card-header">
+          <i class="fas fa-file-export" aria-hidden="true" style="color:var(--warning)"></i>
+          <h3>Wydania Zewnętrzne (WZ) – nagłówki</h3>
+          <span class="card-meta" id="meta-wz"></span>
+          <button class="btn btn-success" onclick="exportSheet('wz-naglowki')">
+            <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport
+          </button>
+        </div>
+        <div class="table-controls">
+          <input type="text" class="search-input" placeholder="Szukaj w WZ..." id="search-wz" oninput="filterTable('wz-naglowki', this.value)">
+          <select class="filter-select" id="filter-odbiorca-wz" onchange="filterTable('wz-naglowki', document.getElementById('search-wz').value)">
+            <option value="">Wszyscy odbiorcy</option>
+          </select>
+          <button class="btn btn-outline" onclick="resetSort('wz-naglowki')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-wz-naglowki">
+            <thead>
+              <tr>
+                <th onclick="sortTable('wz-naglowki',0)">Lp <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',1)">Nr WZ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',2)">Data WZ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',3)">Data wydania <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',4)">Odbiorca <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',5)">Nr FA <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',6)">Data FA <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-naglowki',7)" class="text-right">Wartość WZ <span class="sort-icon">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-wz-naglowki"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="footer-wz-naglowki"></span>
+          <div class="pagination" id="pages-wz-naglowki"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WZ WIERSZE -->
+    <div class="view-panel" id="view-wz-wiersze">
+      <div class="card" style="flex:1;display:flex;flex-direction:column">
+        <div class="card-header">
+          <i class="fas fa-list" aria-hidden="true" style="color:var(--warning)"></i>
+          <h3>Wydania Zewnętrzne (WZ) – pozycje towarów</h3>
+          <span class="card-meta" id="meta-wzw"></span>
+          <button class="btn btn-success" onclick="exportSheet('wz-wiersze')">
+            <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport
+          </button>
+        </div>
+        <div class="table-controls">
+          <input type="text" class="search-input" placeholder="Szukaj towaru, kodu, numeru WZ..." id="search-wzw" oninput="filterTable('wz-wiersze', this.value)">
+          <select class="filter-select" id="filter-wz-nr" onchange="filterTable('wz-wiersze', document.getElementById('search-wzw').value)">
+            <option value="">Wszystkie WZ</option>
+          </select>
+          <button class="btn btn-outline" onclick="resetSort('wz-wiersze')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-wz-wiersze">
+            <thead>
+              <tr>
+                <th onclick="sortTable('wz-wiersze',0)">Lp <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',1)">Nr WZ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',2)">Kod towaru <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',3)">Nazwa towaru <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',4)" class="text-right">Ilość <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',5)">Jm <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',6)" class="text-right">Cena jedn. <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('wz-wiersze',7)" class="text-right">Wartość <span class="sort-icon">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-wz-wiersze"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="footer-wz-wiersze"></span>
+          <div class="pagination" id="pages-wz-wiersze"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MM -->
+    <div class="view-panel" id="view-mm">
+      <div class="card" style="flex:1;display:flex;flex-direction:column">
+        <div class="card-header">
+          <i class="fas fa-exchange-alt" aria-hidden="true" style="color:var(--secondary)"></i>
+          <h3>Przesunięcia Międzymagazynowe (MM)</h3>
+          <span class="card-meta" id="meta-mm"></span>
+          <button class="btn btn-success" onclick="exportSheet('mm')">
+            <i class="fas fa-file-excel" aria-hidden="true"></i> Eksport
+          </button>
+        </div>
+        <div class="table-controls">
+          <input type="text" class="search-input" placeholder="Szukaj w MM..." id="search-mm" oninput="filterTable('mm', this.value)">
+          <button class="btn btn-outline" onclick="resetSort('mm')"><i class="fas fa-sort" aria-hidden="true"></i> Reset</button>
+        </div>
+        <div class="table-wrap">
+          <table id="table-mm">
+            <thead>
+              <tr>
+                <th onclick="sortTable('mm',0)">Typ <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',1)">Nr dokumentu <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',2)">Data <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',3)">Skąd <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',4)">Dokąd <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',5)">Kod towaru <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',6)">Nazwa towaru <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',7)" class="text-right">Ilość <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',8)">Jm <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',9)" class="text-right">Cena jedn. <span class="sort-icon">⇅</span></th>
+                <th onclick="sortTable('mm',10)" class="text-right">Wartość <span class="sort-icon">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-mm"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <span id="footer-mm"></span>
+          <div class="pagination" id="pages-mm"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /content -->
+</main><!-- /main -->
+
+<script>
+// =============================================
+// GLOBALS
+// =============================================
+const PAGE_SIZE = 100;
+
+let jpkData = {
+  naglowek: {},
+  podmiot: {},
+  magazyn: '',
+  pzNaglowki: [],
+  pzWiersze: [],
+  wzNaglowki: [],
+  wzWiersze: [],
+  mmNaglowki: [],
+  mmWiersze: [],
+  mmFull: [] // combined for display
+};
+
+// table state
+let tableState = {};
+
+function initTableState(id, data) {
+  tableState[id] = {
+    data: [...data],
+    filtered: [...data],
+    sortCol: -1,
+    sortDir: 1,
+    page: 1
+  };
+}
+
+// =============================================
+// SIDEBAR TOGGLE
+// =============================================
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+// =============================================
+// FILE HANDLING
+// =============================================
+const dropArea = document.getElementById('drop-area');
+dropArea.addEventListener('dragover', e => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.xml')) {
+    alert('Wybierz plik XML (JPK_MAG).');
+    return;
+  }
+  if (file.size > 50 * 1024 * 1024) {
+    if (!confirm('Plik ma ponad 50 MB (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Może spowolnić przeglądarkę. Kontynuować?')) return;
+  }
+
+  if (file.size > 30 * 1024 * 1024 && typeof sax !== 'undefined') {
+    showLoading(true, 'Wczytuję duży plik strumieniowo...');
+    showProgress(0);
+    parseJPKStream(file).then(parsed => {
+      jpkData = parsed;
+      showLoading(false);
+      showContent();
+    }).catch(err => {
+      showLoading(false);
+      alert('Błąd parsowania strumieniowego:\n' + err.message);
+      console.error(err);
+    });
+  } else {
+    showLoading(true, 'Wczytuję plik JPK_MAG...');
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        parseJPK(e.target.result);
+        showLoading(false);
+        showContent();
+      } catch(err) {
+        showLoading(false);
+        alert('Błąd parsowania pliku XML:\n' + err.message);
+        console.error(err);
+      }
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+}
+
+function loadNewFile() {
+  location.reload();
+}
+
+// =============================================
+// XML PARSING
+// =============================================
+function parseJPK(xmlStr) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, 'application/xml');
+  
+  const err = doc.querySelector('parsererror');
+  if (err) throw new Error('Błędny XML: ' + err.textContent.substring(0, 200));
+
+  // Helper: get first element by local name (ignores namespace prefix)
+  function byLocal(parent, localName) {
+    const all = parent.getElementsByTagName('*');
+    for (let el of all) {
+      if (el.localName === localName) return el;
+    }
+    return null;
+  }
+  function allByLocal(parent, localName) {
+    const result = [];
+    const all = parent.getElementsByTagName('*');
+    for (let el of all) {
+      if (el.localName === localName) result.push(el);
+    }
+    return result;
+  }
+
+  // NAGŁÓWEK
+  const nagl = byLocal(doc, 'Naglowek');
+  if (nagl) {
+    const kf = byLocal(nagl, 'KodFormularza');
+    jpkData.naglowek = {
+      'Kod formularza': kf ? kf.textContent.trim() : '',
+      'Wariant': byLocal(nagl,'WariantFormularza')?.textContent.trim() || '',
+      'Cel złożenia': byLocal(nagl,'CelZlozenia')?.textContent.trim() || '',
+      'Data wytworzenia': byLocal(nagl,'DataWytworzeniaJPK')?.textContent.trim() || '',
+      'Data Od': byLocal(nagl,'DataOd')?.textContent.trim() || '',
+      'Data Do': byLocal(nagl,'DataDo')?.textContent.trim() || '',
+      'Waluta': byLocal(nagl,'DomyslnyKodWaluty')?.textContent.trim() || '',
+      'Kod urzędu': byLocal(nagl,'KodUrzedu')?.textContent.trim() || ''
+    };
+  }
+
+  // PODMIOT
+  const pod = byLocal(doc, 'Podmiot1');
+  if (pod) {
+    jpkData.podmiot = {
+      'NIP': byLocal(pod,'NIP')?.textContent.trim() || '',
+      'Pełna nazwa': byLocal(pod,'PelnaNazwa')?.textContent.trim() || '',
+      'REGON': byLocal(pod,'REGON')?.textContent.trim() || '',
+      'Kraj': byLocal(pod,'KodKraju')?.textContent.trim() || '',
+      'Województwo': byLocal(pod,'Wojewodztwo')?.textContent.trim() || '',
+      'Powiat': byLocal(pod,'Powiat')?.textContent.trim() || '',
+      'Gmina': byLocal(pod,'Gmina')?.textContent.trim() || '',
+      'Ulica': byLocal(pod,'Ulica')?.textContent.trim() || '',
+      'Nr domu': byLocal(pod,'NrDomu')?.textContent.trim() || '',
+      'Miejscowość': byLocal(pod,'Miejscowosc')?.textContent.trim() || '',
+      'Kod pocztowy': byLocal(pod,'KodPocztowy')?.textContent.trim() || '',
+      'Poczta': byLocal(pod,'Poczta')?.textContent.trim() || ''
+    };
+  }
+
+  // MAGAZYN
+  const mag = byLocal(doc, 'Magazyn');
+  jpkData.magazyn = mag ? mag.textContent.trim() : '';
+
+  // PZ NAGŁÓWKI
+  const pzWartosci = allByLocal(doc, 'PZWartosc');
+  jpkData.pzNaglowki = pzWartosci.map(el => ({
+    numer: byLocal(el,'NumerPZ')?.textContent.trim() || '',
+    data: byLocal(el,'DataPZ')?.textContent.trim() || '',
+    wartosc: parseFloat(byLocal(el,'WartoscPZ')?.textContent.trim() || '0'),
+    dataOtrzymania: byLocal(el,'DataOtrzymaniaPZ')?.textContent.trim() || '',
+    dostawca: byLocal(el,'Dostawca')?.textContent.trim() || '',
+    numerFa: byLocal(el,'NumerFaPZ')?.textContent.trim() || '',
+    dataFa: byLocal(el,'DataFaPZ')?.textContent.trim() || ''
+  }));
+
+  // PZ WIERSZE
+  const pzWiersze = allByLocal(doc, 'PZWiersz');
+  jpkData.pzWiersze = pzWiersze.map(el => ({
+    numerPZ: byLocal(el,'Numer2PZ')?.textContent.trim() || '',
+    kod: byLocal(el,'KodTowaruPZ')?.textContent.trim() || '',
+    nazwa: byLocal(el,'NazwaTowaruPZ')?.textContent.trim() || '',
+    ilosc: parseFloat(byLocal(el,'IloscPrzyjetaPZ')?.textContent.trim() || '0'),
+    jm: byLocal(el,'JednostkaMiaryPZ')?.textContent.trim() || '',
+    cena: parseFloat(byLocal(el,'CenaJednPZ')?.textContent.trim() || '0'),
+    wartosc: parseFloat(byLocal(el,'WartoscPozycjiPZ')?.textContent.trim() || '0')
+  }));
+
+  // WZ NAGŁÓWKI
+  const wzWartosci = allByLocal(doc, 'WZWartosc');
+  jpkData.wzNaglowki = wzWartosci.map(el => ({
+    numer: byLocal(el,'NumerWZ')?.textContent.trim() || '',
+    data: byLocal(el,'DataWZ')?.textContent.trim() || '',
+    wartosc: parseFloat(byLocal(el,'WartoscWZ')?.textContent.trim() || '0'),
+    dataWydania: byLocal(el,'DataWydaniaWZ')?.textContent.trim() || '',
+    odbiorca: byLocal(el,'OdbiorcaWZ')?.textContent.trim() || '',
+    numerFa: byLocal(el,'NumerFaWZ')?.textContent.trim() || '',
+    dataFa: byLocal(el,'DataFaWZ')?.textContent.trim() || ''
+  }));
+
+  // WZ WIERSZE
+  const wzWiersze = allByLocal(doc, 'WZWiersz');
+  jpkData.wzWiersze = wzWiersze.map(el => ({
+    numerWZ: byLocal(el,'Numer2WZ')?.textContent.trim() || '',
+    kod: byLocal(el,'KodTowaruWZ')?.textContent.trim() || '',
+    nazwa: byLocal(el,'NazwaTowaruWZ')?.textContent.trim() || '',
+    ilosc: parseFloat(byLocal(el,'IloscWydanaWZ')?.textContent.trim() || '0'),
+    jm: byLocal(el,'JednostkaMiaryWZ')?.textContent.trim() || '',
+    cena: parseFloat(byLocal(el,'CenaJednWZ')?.textContent.trim() || '0'),
+    wartosc: parseFloat(byLocal(el,'WartoscPozycjiWZ')?.textContent.trim() || '0')
+  }));
+
+  // MM
+  const mmWartosci = allByLocal(doc, 'MMWartosc');
+  jpkData.mmNaglowki = mmWartosci.map(el => ({
+    numer: byLocal(el,'NumerMM')?.textContent.trim() || '',
+    data: byLocal(el,'DataMM')?.textContent.trim() || '',
+    wartosc: parseFloat(byLocal(el,'WartoscMM')?.textContent.trim() || '0'),
+    dataWydania: byLocal(el,'DataWydaniaMM')?.textContent.trim() || '',
+    skad: byLocal(el,'SkadMM')?.textContent.trim() || '',
+    dokad: byLocal(el,'DokadMM')?.textContent.trim() || ''
+  }));
+  const mmWiersze = allByLocal(doc, 'MMWiersz');
+  jpkData.mmWiersze = mmWiersze.map(el => ({
+    numerMM: byLocal(el,'Numer2MM')?.textContent.trim() || '',
+    kod: byLocal(el,'KodTowaruMM')?.textContent.trim() || '',
+    nazwa: byLocal(el,'NazwaTowaruMM')?.textContent.trim() || '',
+    ilosc: parseFloat(byLocal(el,'IloscWydanaMM')?.textContent.trim() || '0'),
+    jm: byLocal(el,'JednostkaMiaryMM')?.textContent.trim() || '',
+    cena: parseFloat(byLocal(el,'CenaJednMM')?.textContent.trim() || '0'),
+    wartosc: parseFloat(byLocal(el,'WartoscPozycjiMM')?.textContent.trim() || '0')
+  }));
+
+  // Buduj MM FULL (połączone nagłówki + wiersze)
+  const mmMap = {};
+  jpkData.mmNaglowki.forEach(n => mmMap[n.numer] = n);
+  jpkData.mmFull = jpkData.mmWiersze.map(w => {
+    const h = mmMap[w.numerMM] || {};
+    return {
+      typ: 'MM',
+      numer: w.numerMM,
+      data: h.data || '',
+      skad: h.skad || '',
+      dokad: h.dokad || '',
+      kod: w.kod,
+      nazwa: w.nazwa,
+      ilosc: w.ilosc,
+      jm: w.jm,
+      cena: w.cena,
+      wartosc: w.wartosc
+    };
+  });
+}
+
+// =============================================
+// STREAMING PARSER (dla plików > 30 MB)
+// =============================================
+async function parseJPKStream(file) {
+  const CHUNK = 1024 * 1024;
+  const total = file.size;
+  let bytesRead = 0;
+
+  const data = {
+    naglowek: {}, podmiot: {}, magazyn: '',
+    pzNaglowki: [], pzWiersze: [],
+    wzNaglowki: [], wzWiersze: [],
+    mmNaglowki: [], mmWiersze: [], mmFull: []
+  };
+
+  function lc(name) {
+    const i = name.indexOf(':');
+    return (i >= 0 ? name.substring(i + 1) : name).toLowerCase();
+  }
+
+  function store(sec, obj) {
+    switch (sec) {
+      case 'naglowek':
+        data.naglowek = {
+          'Kod formularza': obj['kodformularza'] || '',
+          'Wariant': obj['wariantformularza'] || '',
+          'Cel złożenia': obj['celzlozenia'] || '',
+          'Data wytworzenia': obj['datawytworzeniajpk'] || '',
+          'Data Od': obj['dataod'] || '',
+          'Data Do': obj['datado'] || '',
+          'Waluta': obj['domyslnykodwaluty'] || '',
+          'Kod urzędu': obj['kodurzedu'] || ''
+        };
+        break;
+      case 'podmiot':
+        data.podmiot = {
+          'NIP': obj['nip'] || '',
+          'Pełna nazwa': obj['pelnanazwa'] || '',
+          'REGON': obj['regon'] || '',
+          'Kraj': obj['kodkraju'] || '',
+          'Województwo': obj['wojewodztwo'] || '',
+          'Powiat': obj['powiat'] || '',
+          'Gmina': obj['gmina'] || '',
+          'Ulica': obj['ulica'] || '',
+          'Nr domu': obj['nrdomu'] || '',
+          'Miejscowość': obj['miejscowosc'] || '',
+          'Kod pocztowy': obj['kodpocztowy'] || '',
+          'Poczta': obj['poczta'] || ''
+        };
+        break;
+      case 'pzwartosc':
+        data.pzNaglowki.push({
+          numer: obj['numerpz'] || '', data: obj['datapz'] || '',
+          wartosc: parseFloat(obj['wartoscpz']) || 0,
+          dataOtrzymania: obj['dataotrzymaniapz'] || '',
+          dostawca: obj['dostawca'] || '',
+          numerFa: obj['numerfapz'] || '', dataFa: obj['datafapz'] || ''
+        });
+        break;
+      case 'pzwiersz':
+        data.pzWiersze.push({
+          numerPZ: obj['numer2pz'] || '', kod: obj['kodtowarupz'] || '',
+          nazwa: obj['nazwawarupz'] || '',
+          ilosc: parseFloat(obj['iloscprzyjetapz']) || 0,
+          jm: obj['jednostkamiarypz'] || '',
+          cena: parseFloat(obj['cenajednpz']) || 0,
+          wartosc: parseFloat(obj['wartoscpozycjipz']) || 0
+        });
+        break;
+      case 'wzwartosc':
+        data.wzNaglowki.push({
+          numer: obj['numerwz'] || '', data: obj['datawz'] || '',
+          wartosc: parseFloat(obj['wartoscwz']) || 0,
+          dataWydania: obj['datawydaniawz'] || '',
+          odbiorca: obj['odbiorcawz'] || '',
+          numerFa: obj['numerfawz'] || '', dataFa: obj['datafawz'] || ''
+        });
+        break;
+      case 'wzwiersz':
+        data.wzWiersze.push({
+          numerWZ: obj['numer2wz'] || '', kod: obj['kodtowaruwz'] || '',
+          nazwa: obj['nazwawaruwz'] || '',
+          ilosc: parseFloat(obj['iloscwydanawz']) || 0,
+          jm: obj['jednostkamiarywz'] || '',
+          cena: parseFloat(obj['cenajednwz']) || 0,
+          wartosc: parseFloat(obj['wartoscpozycjiwz']) || 0
+        });
+        break;
+      case 'mmwartosc':
+        data.mmNaglowki.push({
+          numer: obj['numermm'] || '', data: obj['datamm'] || '',
+          wartosc: parseFloat(obj['wartoscomm']) || 0,
+          dataWydania: obj['datawydaniamm'] || '',
+          skad: obj['skadmm'] || '', dokad: obj['dokadmm'] || ''
+        });
+        break;
+      case 'mmwiersz':
+        data.mmWiersze.push({
+          numerMM: obj['numer2mm'] || '', kod: obj['kodtowarumm'] || '',
+          nazwa: obj['nazwawarumm'] || '',
+          ilosc: parseFloat(obj['iloscwydanamm']) || 0,
+          jm: obj['jednostkamiarymm'] || '',
+          cena: parseFloat(obj['cenajednmm']) || 0,
+          wartosc: parseFloat(obj['wartoscpozycjimm']) || 0
+        });
+        break;
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    try {
+      const parser = sax.parser(false, { trim: true });
+      let sec = '', tag = '', text = '', obj = null;
+      let parseErr = null;
+
+      parser.onerror = e => { parseErr = e; reject(e); };
+
+      parser.onopentag = node => {
+        const name = lc(node.name);
+        if (name === 'jpk_mag') return;
+        if (name === 'naglowek' || name === 'podmiot' || name === 'podmiot1' || name === 'magazyn' ||
+            name === 'pzwartosc' || name === 'pzwiersz' ||
+            name === 'wzwartosc' || name === 'wzwiersz' ||
+            name === 'mmwartosc' || name === 'mmwiersz') {
+          sec = name;
+          if (name === 'podmiot1') sec = 'podmiot';
+          obj = {};
+          tag = '';
+          text = '';
+          return;
+        }
+        if (sec) { tag = name; text = ''; }
+      };
+
+      parser.ontext = t => {
+        if (sec === 'magazyn' || (tag && sec)) text += t;
+      };
+
+      parser.oncdata = t => {
+        if (sec === 'magazyn' || (tag && sec)) text += t;
+      };
+
+      parser.onclosetag = name => {
+        const n = lc(name);
+        if (n === 'jpk_mag') return;
+        if (n === 'podmiot1' && sec === 'podmiot') {
+          store(sec, obj);
+          sec = ''; obj = null; tag = ''; text = '';
+          return;
+        }
+        if (n === sec) {
+          if (sec === 'magazyn') data.magazyn = text.trim();
+          else if (obj) store(sec, obj);
+          sec = ''; obj = null; tag = ''; text = '';
+          return;
+        }
+        if (tag === n && sec && sec !== 'magazyn') {
+          const val = text.trim();
+          if (val) obj[n] = val;
+          tag = ''; text = '';
+        }
+      };
+
+      (async () => {
+        try {
+          while (bytesRead < total) {
+            const end = Math.min(bytesRead + CHUNK, total);
+            const blob = file.slice(bytesRead, end);
+            const chunk = await blob.text();
+            bytesRead = end;
+            if (parseErr) return;
+            parser.write(chunk);
+            showProgress(bytesRead / total);
+            await new Promise(r => setTimeout(r, 0));
+          }
+          if (!parseErr) {
+            parser.close();
+            const mmMap = {};
+            data.mmNaglowki.forEach(n => mmMap[n.numer] = n);
+            data.mmFull = data.mmWiersze.map(w => {
+              const h = mmMap[w.numerMM] || {};
+              return {
+                typ: 'MM', numer: w.numerMM, data: h.data || '',
+                skad: h.skad || '', dokad: h.dokad || '',
+                kod: w.kod, nazwa: w.nazwa,
+                ilosc: w.ilosc, jm: w.jm, cena: w.cena, wartosc: w.wartosc
+              };
+            });
+            resolve(data);
+          }
+        } catch(e) { reject(e); }
+      })();
+    } catch(e) { reject(e); }
+  });
+}
+
+// =============================================
+// SHOW CONTENT
+// =============================================
+function showContent() {
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('content').classList.add('active');
+  document.getElementById('btn-export').style.display = 'flex';
+
+  const firma = jpkData.podmiot['Pełna nazwa'] || '';
+  const nip = jpkData.podmiot['NIP'] || '';
+  document.getElementById('firm-info').textContent = firma + (nip ? '  |  NIP: ' + nip : '');
+  document.getElementById('topbar-title').textContent = 'JPK_MAG  ·  ' + (jpkData.magazyn ? 'Magazyn: ' + jpkData.magazyn : '');
+
+  // badges
+  setEl('badge-pz', jpkData.pzNaglowki.length);
+  setEl('badge-pzw', jpkData.pzWiersze.length);
+  setEl('badge-wz', jpkData.wzNaglowki.length);
+  setEl('badge-wzw', jpkData.wzWiersze.length);
+  setEl('badge-mm', jpkData.mmFull.length);
+
+  buildNaglowek();
+  buildPZNaglowki();
+  buildPZWiersze();
+  buildWZNaglowki();
+  buildWZWiersze();
+  buildMM();
+  buildStats();
+  buildPodsumowanie();
+}
+
+function setEl(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// =============================================
+// NAGŁÓWEK VIEW
+// =============================================
+function buildNaglowek() {
+  const ng = document.getElementById('info-naglowek');
+  ng.innerHTML = Object.entries(jpkData.naglowek).map(([k,v]) =>
+    `<div class="info-item"><div class="info-label">${escHtml(k)}</div><div class="info-value">${escHtml(v)||'—'}</div></div>`
+  ).join('');
+
+  const pm = document.getElementById('info-podmiot');
+  pm.innerHTML = Object.entries(jpkData.podmiot).map(([k,v]) =>
+    `<div class="info-item"><div class="info-label">${escHtml(k)}</div><div class="info-value">${escHtml(v)||'—'}</div></div>`
+  ).join('');
+}
+
+function buildStats() {
+  const sumPZ = jpkData.pzNaglowki.reduce((s,r)=>s+r.wartosc,0);
+  const sumWZ = jpkData.wzNaglowki.reduce((s,r)=>s+r.wartosc,0);
+  const sumMM = jpkData.mmNaglowki.reduce((s,r)=>s+r.wartosc,0);
+
+  document.getElementById('stats-row').innerHTML = [
+    { label:'Dokumenty PZ', val: jpkData.pzNaglowki.length, sub: fmt(sumPZ)+' PLN', icon:'file-import', color:'var(--primary)' },
+    { label:'Pozycje PZ', val: jpkData.pzWiersze.length, sub: 'wierszy towaru', icon:'list', color:'var(--primary)' },
+    { label:'Dokumenty WZ', val: jpkData.wzNaglowki.length, sub: fmt(sumWZ)+' PLN', icon:'file-export', color:'var(--warning)' },
+    { label:'Pozycje WZ', val: jpkData.wzWiersze.length, sub: 'wierszy towaru', icon:'list', color:'var(--warning)' },
+    { label:'Dok. MM', val: jpkData.mmNaglowki.length, sub: fmt(sumMM)+' PLN', icon:'exchange-alt', color:'var(--secondary)' },
+    { label:'Magazyn', val: jpkData.magazyn, sub: jpkData.naglowek['Data Od']+' – '+jpkData.naglowek['Data Do'], icon:'warehouse', color:'#0e9f6e' }
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-label"><i class="fas fa-${s.icon}" aria-hidden="true" style="color:${s.color};margin-right:5px"></i>${s.label}</div>
+      <div class="stat-value">${typeof s.val==='number'?s.val.toLocaleString('pl-PL'):s.val}</div>
+      <div class="stat-sub">${s.sub}</div>
+    </div>
+  `).join('');
+}
+
+// =============================================
+// PODSUMOWANIE
+// =============================================
+function buildPodsumowanie() {
+  const sumPZ = jpkData.pzNaglowki.reduce((s,r)=>s+r.wartosc,0);
+  const sumWZ = jpkData.wzNaglowki.reduce((s,r)=>s+r.wartosc,0);
+  const sumMM = jpkData.mmNaglowki.reduce((s,r)=>s+r.wartosc,0);
+  const iloscPZ = jpkData.pzWiersze.reduce((s,r)=>s+r.ilosc,0);
+  const iloscWZ = jpkData.wzWiersze.reduce((s,r)=>s+r.ilosc,0);
+  const iloscMM = jpkData.mmFull.reduce((s,r)=>s+r.ilosc,0);
+  const liczbaDokPZ = jpkData.pzNaglowki.length;
+  const liczbaDokWZ = jpkData.wzNaglowki.length;
+  const liczbaDokMM = jpkData.mmNaglowki.length;
+  const liczbaPozPZ = jpkData.pzWiersze.length;
+  const liczbaPozWZ = jpkData.wzWiersze.length;
+
+  const rows = [
+    { label:'PZ – Przyjęcia', dok: liczbaDokPZ, poz: liczbaPozPZ, wart: sumPZ, il: iloscPZ, cls:'tag-green', icon:'file-import', view:'pz-naglowki' },
+    { label:'WZ – Wydania', dok: liczbaDokWZ, poz: liczbaPozWZ, wart: sumWZ, il: iloscWZ, cls:'tag-orange', icon:'file-export', view:'wz-naglowki' },
+    { label:'MM – Przesunięcia', dok: liczbaDokMM, poz: 0, wart: sumMM, il: iloscMM, cls:'tag-purple', icon:'exchange-alt', view:'mm' },
+  ];
+
+  const saldoWart = sumPZ - sumWZ;
+  const saldoIl = iloscPZ - iloscWZ;
+
+  document.getElementById('tbody-podsumowanie').innerHTML = rows.map((r, i) => {
+    const tagCls = r.cls || 'tag-blue';
+    return `<tr class="clickable-row" onclick="showView('${r.view}')" onkeydown="if(event.key==='Enter')showView('${r.view}')" tabindex="0" role="button" data-view="${r.view}">
+      <td><span class="tag ${tagCls}"><i class="fas fa-${r.icon}" aria-hidden="true"></i> ${r.label}</span></td>
+      <td class="text-right">${r.dok.toLocaleString('pl-PL')}</td>
+      <td class="text-right">${r.poz.toLocaleString('pl-PL')}</td>
+      <td class="text-right money">${fmt(r.wart)}</td>
+      <td class="text-right">${fmtNum(r.il)}</td>
+    </tr>`;
+  }).join('') + `
+    <tr style="border-top:2px solid var(--gray-300);font-weight:600">
+      <td><span class="tag" style="background:var(--gray-100);color:var(--gray-700)"><i class="fas fa-balance-scale" aria-hidden="true"></i> Saldo (PZ – WZ)</span></td>
+      <td class="text-right">${(liczbaDokPZ - liczbaDokWZ).toLocaleString('pl-PL')}</td>
+      <td class="text-right">${(liczbaPozPZ - liczbaPozWZ).toLocaleString('pl-PL')}</td>
+      <td class="text-right money" style="color:${saldoWart < 0 ? 'var(--danger)' : 'var(--success)'}">${fmt(saldoWart)}</td>
+      <td class="text-right" style="color:${saldoIl < 0 ? 'var(--danger)' : 'var(--success)'}">${fmtNum(saldoIl)}</td>
+    </tr>`;
+
+  document.getElementById('meta-podsumowanie').textContent =
+    `okres: ${jpkData.naglowek['Data Od'] || '?'} – ${jpkData.naglowek['Data Do'] || '?'}`;
+}
+
+// =============================================
+// PZ NAGŁÓWKI
+// =============================================
+function buildPZNaglowki() {
+  const rows = jpkData.pzNaglowki.map((r,i) => [
+    i+1, r.numer, r.data, r.dataOtrzymania, r.dostawca, r.numerFa, r.dataFa, r.wartosc
+  ]);
+  initTableState('pz-naglowki', rows);
+  setEl('meta-pz', jpkData.pzNaglowki.length + ' dokumentów');
+
+  // filter: dostawcy
+  const dostawcy = [...new Set(jpkData.pzNaglowki.map(r=>r.dostawca))].sort().filter(Boolean);
+  const sel = document.getElementById('filter-dostawca-pz');
+  dostawcy.forEach(d => sel.innerHTML += `<option value="${d}">${d}</option>`);
+
+  renderTable('pz-naglowki');
+}
+
+// =============================================
+// PZ WIERSZE
+// =============================================
+function buildPZWiersze() {
+  const rows = jpkData.pzWiersze.map((r,i) => [
+    i+1, r.numerPZ, r.kod, r.nazwa, r.ilosc, r.jm, r.cena, r.wartosc
+  ]);
+  initTableState('pz-wiersze', rows);
+  setEl('meta-pzw', jpkData.pzWiersze.length + ' pozycji');
+
+  const nry = [...new Set(jpkData.pzWiersze.map(r=>r.numerPZ))].sort();
+  const sel = document.getElementById('filter-pz-nr');
+  nry.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+
+  renderTable('pz-wiersze');
+}
+
+// =============================================
+// WZ NAGŁÓWKI
+// =============================================
+function buildWZNaglowki() {
+  const rows = jpkData.wzNaglowki.map((r,i) => [
+    i+1, r.numer, r.data, r.dataWydania, r.odbiorca, r.numerFa, r.dataFa, r.wartosc
+  ]);
+  initTableState('wz-naglowki', rows);
+  setEl('meta-wz', jpkData.wzNaglowki.length + ' dokumentów');
+
+  const odbiorcy = [...new Set(jpkData.wzNaglowki.map(r=>r.odbiorca))].sort().filter(Boolean);
+  const sel = document.getElementById('filter-odbiorca-wz');
+  odbiorcy.forEach(d => sel.innerHTML += `<option value="${d}">${d}</option>`);
+
+  renderTable('wz-naglowki');
+}
+
+// =============================================
+// WZ WIERSZE
+// =============================================
+function buildWZWiersze() {
+  const rows = jpkData.wzWiersze.map((r,i) => [
+    i+1, r.numerWZ, r.kod, r.nazwa, r.ilosc, r.jm, r.cena, r.wartosc
+  ]);
+  initTableState('wz-wiersze', rows);
+  setEl('meta-wzw', jpkData.wzWiersze.length + ' pozycji');
+
+  const nry = [...new Set(jpkData.wzWiersze.map(r=>r.numerWZ))].sort();
+  const sel = document.getElementById('filter-wz-nr');
+  nry.forEach(n => sel.innerHTML += `<option value="${n}">${n}</option>`);
+
+  renderTable('wz-wiersze');
+}
+
+// =============================================
+// MM
+// =============================================
+function buildMM() {
+  const rows = jpkData.mmFull.map((r,i) => [
+    r.typ, r.numer, r.data, r.skad, r.dokad, r.kod, r.nazwa, r.ilosc, r.jm, r.cena, r.wartosc
+  ]);
+  initTableState('mm', rows);
+  setEl('meta-mm', jpkData.mmFull.length + ' wierszy');
+  renderTable('mm');
+}
+
+// =============================================
+// RENDER TABLE
+// =============================================
+function renderTable(id) {
+  const st = tableState[id];
+  if (!st) return;
+
+  const tbody = document.getElementById('tbody-' + id);
+  const footerEl = document.getElementById('footer-' + id);
+  const pagesEl = document.getElementById('pages-' + id);
+
+  const total = st.filtered.length;
+  const startIdx = (st.page - 1) * PAGE_SIZE;
+  const pageData = st.filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+  // money columns (last col always money)
+  const moneyCol = (id.includes('wiersze') || id === 'mm') ? [7] : [7];
+  const moneyColMM = [10];
+
+  tbody.innerHTML = pageData.map((row, ri) => {
+    const cells = row.map((cell, ci) => {
+      const isNum = typeof cell === 'number';
+      const isMoneyCols = (id === 'mm') ? moneyColMM.includes(ci) : moneyCol.includes(ci);
+      let display = isNum ? (isMoneyCols ? fmt(cell) : fmtNum(cell)) : escHtml(String(cell));
+      const cls = isNum ? (isMoneyCols ? 'text-right money' : 'text-right') : '';
+      // tag for type col in MM
+      if (id === 'mm' && ci === 0) display = `<span class="tag tag-purple"><i class="fas fa-exchange-alt" aria-hidden="true"></i> ${display}</span>`;
+      return `<td class="${cls}">${display}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  // summary row
+  const sumVal = st.filtered.reduce((s, row) => s + (typeof row[row.length-1] === 'number' ? row[row.length-1] : 0), 0);
+  footerEl.textContent = `Wyświetlono ${Math.min(startIdx+PAGE_SIZE, total)} z ${total} wierszy  |  Suma wartości: ${fmt(sumVal)} PLN`;
+
+  // pagination
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  pagesEl.innerHTML = '';
+  if (totalPages > 1) {
+    const addBtn = (label, page, disabled, active) => {
+      const btn = document.createElement('button');
+      btn.className = 'page-btn' + (active?' active':'');
+      btn.textContent = label;
+      btn.disabled = disabled;
+      btn.onclick = () => { st.page = page; renderTable(id); };
+      pagesEl.appendChild(btn);
+    };
+    addBtn('‹', st.page-1, st.page===1, false);
+    // show limited pages
+    let start = Math.max(1, st.page-2);
+    let end = Math.min(totalPages, start+4);
+    start = Math.max(1, end-4);
+    for (let p=start; p<=end; p++) addBtn(p, p, false, p===st.page);
+    addBtn('›', st.page+1, st.page===totalPages, false);
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// =============================================
+// FILTER
+// =============================================
+function filterTable(id, searchVal) {
+  const st = tableState[id];
+  if (!st) return;
+
+  const q = searchVal.toLowerCase().trim();
+  let filtered = st.data;
+
+  // extra filter dropdowns
+  if (id === 'pz-naglowki') {
+    const dos = document.getElementById('filter-dostawca-pz')?.value;
+    if (dos) filtered = filtered.filter(r => String(r[4]) === dos);
+  }
+  if (id === 'wz-naglowki') {
+    const odb = document.getElementById('filter-odbiorca-wz')?.value;
+    if (odb) filtered = filtered.filter(r => String(r[4]) === odb);
+  }
+  if (id === 'pz-wiersze') {
+    const nr = document.getElementById('filter-pz-nr')?.value;
+    if (nr) filtered = filtered.filter(r => String(r[1]) === nr);
+  }
+  if (id === 'wz-wiersze') {
+    const nr = document.getElementById('filter-wz-nr')?.value;
+    if (nr) filtered = filtered.filter(r => String(r[1]) === nr);
+  }
+
+  if (q) {
+    filtered = filtered.filter(row =>
+      row.some(cell => String(cell).toLowerCase().includes(q))
+    );
+  }
+
+  st.filtered = filtered;
+  st.page = 1;
+  renderTable(id);
+}
+
+// =============================================
+// SORT
+// =============================================
+function sortTable(id, col) {
+  const st = tableState[id];
+  if (!st) return;
+
+  // toggle
+  if (st.sortCol === col) st.sortDir *= -1;
+  else { st.sortCol = col; st.sortDir = 1; }
+
+  st.filtered.sort((a, b) => {
+    let va = a[col], vb = b[col];
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * st.sortDir;
+    return String(va).localeCompare(String(vb), 'pl') * st.sortDir;
+  });
+
+  // update header classes
+  const table = document.getElementById('table-' + id);
+  if (table) {
+    table.querySelectorAll('thead th').forEach((th, i) => {
+      th.classList.remove('sort-asc','sort-desc');
+      const icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = '⇅';
+      if (i === col) {
+        th.classList.add(st.sortDir===1?'sort-asc':'sort-desc');
+        if (icon) icon.textContent = st.sortDir===1?'↑':'↓';
+      }
+    });
+  }
+
+  st.page = 1;
+  renderTable(id);
+}
+
+function resetSort(id) {
+  const st = tableState[id];
+  if (!st) return;
+  st.sortCol = -1;
+  st.sortDir = 1;
+  st.filtered = [...st.data];
+  st.page = 1;
+  // clear filter inputs
+  const searchMap = { 'pz-naglowki':'pz', 'pz-wiersze':'pzw', 'wz-naglowki':'wz', 'wz-wiersze':'wzw', 'mm':'mm' };
+  const si = document.getElementById('search-' + (searchMap[id] || id));
+  if (si) si.value = '';
+  renderTable(id);
+}
+
+// =============================================
+// NAVIGATION
+// =============================================
+function showView(id) {
+  document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  const panel = document.getElementById('view-' + id);
+  const nav = document.getElementById('nav-' + id);
+  if (panel) panel.classList.add('active');
+  if (nav) nav.classList.add('active');
+}
+
+// =============================================
+// HELPERS
+// =============================================
+function fmt(n) {
+  if (isNaN(n)) return '0,00';
+  return n.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtNum(n) {
+  if (isNaN(n)) return '0';
+  return n.toLocaleString('pl-PL', {minimumFractionDigits:0, maximumFractionDigits:4});
+}
+function showLoading(v, text) {
+  document.getElementById('loading-overlay').classList.toggle('show', v);
+  if (text) document.getElementById('loading-text').textContent = text;
+  document.getElementById('progress-wrap').style.display = v ? 'block' : 'none';
+}
+function showProgress(pct) {
+  const bar = document.getElementById('progress-bar');
+  const label = document.getElementById('loading-pct');
+  if (bar) bar.style.width = (pct * 100) + '%';
+  if (label) label.textContent = Math.round(pct * 100) + '%';
+}
+
+document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+// =============================================
+// EXPORT XLS
+// =============================================
+function getSheetDataHeaders(id) {
+  const headers = {
+    'pz-naglowki': ['Lp','Nr PZ','Data PZ','Data otrzymania','Dostawca','Nr FA/dok.','Data FA','Wartość PZ'],
+    'pz-wiersze':  ['Lp','Nr PZ','Kod towaru','Nazwa towaru','Ilość','Jm','Cena jedn.','Wartość'],
+    'wz-naglowki': ['Lp','Nr WZ','Data WZ','Data wydania','Odbiorca','Nr FA','Data FA','Wartość WZ'],
+    'wz-wiersze':  ['Lp','Nr WZ','Kod towaru','Nazwa towaru','Ilość','Jm','Cena jedn.','Wartość'],
+    'mm':          ['Typ','Nr dokumentu','Data','Skąd','Dokąd','Kod towaru','Nazwa towaru','Ilość','Jm','Cena jedn.','Wartość']
+  };
+  return headers[id] || [];
+}
+
+function exportSheet(id) {
+  const st = tableState[id];
+  if (!st) return;
+  const headers = getSheetDataHeaders(id);
+  const data = [headers, ...st.filtered.map(row => row.map(c => typeof c === 'number' ? c : String(c)))];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  // column widths
+  ws['!cols'] = headers.map((h,i) => {
+    const maxLen = Math.max(h.length, ...st.filtered.map(r=>String(r[i]).length));
+    return { wch: Math.min(maxLen + 2, 50) };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, id.toUpperCase().replace('-','_'));
+  XLSX.writeFile(wb, `JPK_MAG_${id}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+function exportAllXLS() {
+  const wb = XLSX.utils.book_new();
+  const firma = jpkData.podmiot['Pełna nazwa'] || '';
+  const nip = jpkData.podmiot['NIP'] || '';
+
+  // Sheet: Nagłówek
+  const naglData = [
+    ['Pole','Wartość'],
+    ...Object.entries({...jpkData.naglowek, ...{'Magazyn': jpkData.magazyn}, ...jpkData.podmiot}).map(([k,v])=>[k,v])
+  ];
+  const wsN = XLSX.utils.aoa_to_sheet(naglData);
+  wsN['!cols'] = [{wch:25},{wch:40}];
+  XLSX.utils.book_append_sheet(wb, wsN, 'Nagłówek');
+
+  const sheets = ['pz-naglowki','pz-wiersze','wz-naglowki','wz-wiersze','mm'];
+  const names  = ['PZ_Nagłówki','PZ_Pozycje','WZ_Nagłówki','WZ_Pozycje','MM'];
+  sheets.forEach((id, i) => {
+    const st = tableState[id];
+    if (!st) return;
+    const headers = getSheetDataHeaders(id);
+    const data = [headers, ...st.data.map(row => row.map(c => typeof c === 'number' ? c : String(c)))];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = headers.map((h,ci) => {
+      const maxLen = Math.max(h.length, ...st.data.slice(0,200).map(r=>String(r[ci]).length));
+      return { wch: Math.min(maxLen + 2, 50) };
+    });
+    XLSX.utils.book_append_sheet(wb, ws, names[i]);
+  });
+
+  XLSX.writeFile(wb, `JPK_MAG_${(firma||'eksport').replace(/[^a-zA-Z0-9_]/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+</script>
+</body>
+</html>
